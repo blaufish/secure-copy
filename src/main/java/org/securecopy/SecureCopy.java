@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.DirectoryWalker;
 import org.apache.commons.io.FileUtils;
 
@@ -110,8 +111,9 @@ public class SecureCopy {
 						md.update(input, 0, readBytes);
 						fos.write(input, 0, readBytes);
 					}
-//					byte[] digest = md.digest();
-//					System.out.println(hex(digest));
+					byte[] digest = md.digest();
+					String hex = Hex.encodeHexString(digest);
+					System.out.printf("%s %s\n", hex, destinationFileName);
 				}
 
 			}

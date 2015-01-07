@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -36,9 +37,28 @@ public class SecureCopy {
 
 	}
 
+	private static void copyFile(File sourceFile, String destinationFileName)
+			throws FileNotFoundException, IOException, NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
+		try (FileInputStream fis = new FileInputStream(sourceFile)) {
+
+			try (FileOutputStream fos = new FileOutputStream(
+					destinationFileName)) {
+				byte[] input = new byte[64_000];
+				int readBytes;
+				while ((readBytes = fis.read(input)) != -1) {
+					md.update(input, 0, readBytes);
+					fos.write(input, 0, readBytes);
+				}
+				byte[] digest = md.digest();
+				String hex = Hex.encodeHexString(digest);
+				System.out.printf("%s %s\n", hex, destinationFileName);
+			}
+		}
+	}
+
 	static class CopyUtility extends DirectoryWalker<File> {
 		String destination;
-		MessageDigest md = null;
 		List<File> currentDirectory = new ArrayList<File>();
 		String currentDestinationPath = null;
 		int fileCount = 0;
@@ -47,7 +67,6 @@ public class SecureCopy {
 
 		public Collection<File> copyFiles(String source, String destination)
 				throws Exception {
-			md = MessageDigest.getInstance("SHA-256");
 			File sourceDirectory = new File(source);
 			this.destination = destination;
 
@@ -59,12 +78,13 @@ public class SecureCopy {
 		@Override
 		protected boolean handleDirectory(File directory, int depth,
 				Collection<File> results) {
-			if (depth <= 0) {
-				return true;
+			if (depth == 0) {
+				currentDestinationPath = destination;
+			} else {
+				dirCount++;
+				currentDirectory.add(directory);
+				currentDestinationPath = calculateDestinationPath();
 			}
-			dirCount++;
-			currentDirectory.add(directory);
-			currentDestinationPath = calculateDestinationPath();
 			System.out.format("Create dir: %s\n", currentDestinationPath);
 			new File(currentDestinationPath).mkdirs();
 			return true;
@@ -82,10 +102,11 @@ public class SecureCopy {
 			fileCount++;
 			sizeCount += file.length();
 			try {
-				copyFile(file);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				String destinationFileName = currentDestinationPath
+						+ File.separator + file.getName();
+				copyFile(file, destinationFileName);
+			} catch (IOException | NoSuchAlgorithmException e) {
+				throw new RuntimeException(e);
 			}
 		}
 
@@ -95,28 +116,6 @@ public class SecureCopy {
 				dir += File.separator + d.getName();
 			}
 			return dir;
-		}
-
-		private void copyFile(File sourceFile) throws FileNotFoundException,
-				IOException {
-			try (FileInputStream fis = new FileInputStream(sourceFile)) {
-
-				String destinationFileName = currentDestinationPath
-						+ File.separator + sourceFile.getName();
-				try (FileOutputStream fos = new FileOutputStream(
-						destinationFileName)) {
-					byte[] input = new byte[64_000];
-					int readBytes;
-					while ((readBytes = fis.read(input)) != -1) {
-						md.update(input, 0, readBytes);
-						fos.write(input, 0, readBytes);
-					}
-					byte[] digest = md.digest();
-					String hex = Hex.encodeHexString(digest);
-					System.out.printf("%s %s\n", hex, destinationFileName);
-				}
-
-			}
 		}
 
 	}

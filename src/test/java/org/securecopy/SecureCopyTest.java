@@ -14,8 +14,8 @@ import org.junit.Test;
 public class SecureCopyTest {
 
 	private static final String TEMP_DIR = ".tmp";
-	private static final String SOURCE_DIR = TEMP_DIR + "/source";
-	private static final String DESTINATION_DIR = TEMP_DIR + "/destination";
+	private static final String SOURCE_DIR = TEMP_DIR + File.separator + "source";
+	private static final String DESTINATION_DIR = TEMP_DIR + File.separator + "destination";
 
 	@Test
 	public void testMain() throws Exception {

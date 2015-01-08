@@ -1,7 +1,5 @@
-.tmp
-.settings/org.eclipse.jdt.core.prefs
-.settings/org.eclipse.jdt.core.prefs
-.settings/org.eclipse.m2e.core.prefs
+.tmp/**
+.settings/**
 .project
 .classpath
-*.class
+target/**

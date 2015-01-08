@@ -20,7 +20,7 @@ public class SecureCopyTest {
 	@Test
 	public void testMain() throws Exception {
 		SecureCopy.main(SOURCE_DIR, DESTINATION_DIR);
-		fail("Not yet implemented");
+		fail("Not yet implemented (todo: explicitly call sha256 sum to verify)");
 	}
 
 	@BeforeClass

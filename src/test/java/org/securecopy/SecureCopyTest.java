@@ -3,9 +3,16 @@ package org.securecopy;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -20,7 +27,47 @@ public class SecureCopyTest {
 	@Test
 	public void testMain() throws Exception {
 		SecureCopy.main(SOURCE_DIR, DESTINATION_DIR);
-		fail("Not yet implemented (todo: explicitly call sha256 sum to verify)");
+
+		File[] files = locateSha256sum();
+		assertEquals(1, files.length);
+		
+		List<String> checksumLines = FileUtils.readLines(files[0]);
+		assertEquals(150, checksumLines.size());
+		
+		for (String line : checksumLines) {
+			final String checksum = line.substring(0, 64);
+			final String filename = line.substring(65);
+			String hex = sha256sum(filename);
+			System.out.printf("%s %s: %s\n", checksum, filename,
+					checksum.equals(hex) ? "OK" : "FAILED!!!");
+			assertEquals(checksum, hex);
+		}	
+	}
+
+	private String sha256sum(String filename) throws NoSuchAlgorithmException, IOException,
+			FileNotFoundException {
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
+		try (FileInputStream fis = new FileInputStream(filename)) {
+			byte[] input = new byte[4_000_000];
+			int readBytes;
+			while ((readBytes = fis.read(input)) != -1) {
+				md.update(input, 0, readBytes);
+			}
+		}
+		byte[] digest = md.digest();
+		String hex = Hex.encodeHexString(digest);
+		return hex;
+	}
+
+	private File[] locateSha256sum() {
+		FilenameFilter filter = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.matches("sha256-.*");
+			}
+		};
+		File[] files = new File(DESTINATION_DIR).listFiles(filter);
+		return files;
 	}
 
 	@BeforeClass
@@ -33,6 +80,8 @@ public class SecureCopyTest {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+		File tempdir = new File(TEMP_DIR);
+		FileUtils.deleteDirectory(tempdir);
 	}
 
 	private static void createSourceDir() throws IOException {

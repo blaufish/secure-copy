@@ -34,17 +34,18 @@ public class SecureCopy {
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
 		new File(destination).mkdirs();
-		String hashfilename = String.format("%s%s%s-%d.txt", destination, File.separator, "sha256", System.currentTimeMillis());
+		String hashfilename = String.format("%s%s%s-%d.txt", destination,
+				File.separator, "sha256", System.currentTimeMillis());
 		try (PrintWriter hashPrintWriter = new PrintWriter(hashfilename)) {
 			CopyUtility cu = new CopyUtility();
-			cu.copyFiles(source, destination, hashPrintWriter);			
+			cu.copyFiles(source, destination, hashPrintWriter, lister.sizeCount);
 		}
-		
 
 	}
-	
-	private static void copyFile(File sourceFile, String destinationFileName, PrintWriter hashprinter)
-			throws FileNotFoundException, IOException, NoSuchAlgorithmException {
+
+	private static void copyFile(File sourceFile, String destinationFileName,
+			PrintWriter hashprinter) throws FileNotFoundException, IOException,
+			NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
 
@@ -71,16 +72,21 @@ public class SecureCopy {
 		int fileCount = 0;
 		int dirCount = 0;
 		long sizeCount = 0;
+		long bytesToCopy;
+		long started;
 
-		public Collection<File> copyFiles(String source, String destination, PrintWriter hashPrintWriter)
-				throws Exception {
+		public Collection<File> copyFiles(String source, String destination,
+				PrintWriter hashPrintWriter, long bytesToCopy) throws Exception {
 			this.destination = destination;
 			this.hashPrintWriter = hashPrintWriter;
-			
+			this.bytesToCopy = bytesToCopy;
+			this.started = System.currentTimeMillis();
+
 			File sourceDirectory = new File(source);
 
 			Collection<File> files = new ArrayList<File>();
 			walk(sourceDirectory, files);
+			System.out.println(" done!");
 			return files;
 		}
 
@@ -94,7 +100,7 @@ public class SecureCopy {
 				currentDirectory.add(directory);
 				currentDestinationPath = calculateDestinationPath();
 			}
-//			System.out.format("Create dir: %s\n", currentDestinationPath);
+			// System.out.format("Create dir: %s\n", currentDestinationPath);
 			new File(currentDestinationPath).mkdirs();
 			return true;
 		}
@@ -117,7 +123,27 @@ public class SecureCopy {
 			} catch (IOException | NoSuchAlgorithmException e) {
 				throw new RuntimeException(e);
 			}
-			
+			statistics();
+		}
+
+		String statisticsLine = "";
+		long lastStatistics = 0;
+
+		private void statistics() {
+			long now = System.currentTimeMillis();
+			if ((now - lastStatistics) < 10_000)
+				return;
+			final long secondsElapsed = (now - started) / 1000;
+			if (secondsElapsed <= 0)
+				return;
+			lastStatistics = now;
+			for (int i = 0; i < statisticsLine.length(); i++)
+				System.out.print("\b");
+			statisticsLine = String.format("%s of %s (%s/s)...", FileUtils
+					.byteCountToDisplaySize(sizeCount), FileUtils
+					.byteCountToDisplaySize(bytesToCopy), FileUtils
+					.byteCountToDisplaySize(sizeCount / secondsElapsed));
+			System.out.print(statisticsLine);
 		}
 
 		private String calculateDestinationPath() {

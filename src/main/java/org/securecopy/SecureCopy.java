@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -23,28 +24,33 @@ public class SecureCopy {
 			return;
 		}
 
+		final String source = args[0];
+		String destination = args[1];
+
 		ListFileUtility lister = new ListFileUtility();
-		Collection<File> files = lister.listFiles(args[0]);
+		Collection<File> files = lister.listFiles(source);
 		System.out.format("Entries: %d Dirs: %d Files: %d Size: %s\n",
 				files.size(), lister.dirCount, lister.fileCount,
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
-		for (File f : files)
-			System.out.println(f.getAbsolutePath());
-
-		CopyUtility cu = new CopyUtility();
-		cu.copyFiles(args[0], args[1]);
+		new File(destination).mkdirs();
+		String hashfilename = String.format("%s%s%s-%d.txt", destination, File.separator, "sha256", System.currentTimeMillis());
+		try (PrintWriter hashPrintWriter = new PrintWriter(hashfilename)) {
+			CopyUtility cu = new CopyUtility();
+			cu.copyFiles(source, destination, hashPrintWriter);			
+		}
+		
 
 	}
-
-	private static void copyFile(File sourceFile, String destinationFileName)
+	
+	private static void copyFile(File sourceFile, String destinationFileName, PrintWriter hashprinter)
 			throws FileNotFoundException, IOException, NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
 
 			try (FileOutputStream fos = new FileOutputStream(
 					destinationFileName)) {
-				byte[] input = new byte[64_000];
+				byte[] input = new byte[4_000_000];
 				int readBytes;
 				while ((readBytes = fis.read(input)) != -1) {
 					md.update(input, 0, readBytes);
@@ -52,23 +58,26 @@ public class SecureCopy {
 				}
 				byte[] digest = md.digest();
 				String hex = Hex.encodeHexString(digest);
-				System.out.printf("%s %s\n", hex, destinationFileName);
+				hashprinter.printf("%s %s\n", hex, destinationFileName);
 			}
 		}
 	}
 
 	static class CopyUtility extends DirectoryWalker<File> {
 		String destination;
+		PrintWriter hashPrintWriter;
 		List<File> currentDirectory = new ArrayList<File>();
 		String currentDestinationPath = null;
 		int fileCount = 0;
 		int dirCount = 0;
 		long sizeCount = 0;
 
-		public Collection<File> copyFiles(String source, String destination)
+		public Collection<File> copyFiles(String source, String destination, PrintWriter hashPrintWriter)
 				throws Exception {
-			File sourceDirectory = new File(source);
 			this.destination = destination;
+			this.hashPrintWriter = hashPrintWriter;
+			
+			File sourceDirectory = new File(source);
 
 			Collection<File> files = new ArrayList<File>();
 			walk(sourceDirectory, files);
@@ -85,7 +94,7 @@ public class SecureCopy {
 				currentDirectory.add(directory);
 				currentDestinationPath = calculateDestinationPath();
 			}
-			System.out.format("Create dir: %s\n", currentDestinationPath);
+//			System.out.format("Create dir: %s\n", currentDestinationPath);
 			new File(currentDestinationPath).mkdirs();
 			return true;
 		}
@@ -104,10 +113,11 @@ public class SecureCopy {
 			try {
 				String destinationFileName = currentDestinationPath
 						+ File.separator + file.getName();
-				copyFile(file, destinationFileName);
+				copyFile(file, destinationFileName, hashPrintWriter);
 			} catch (IOException | NoSuchAlgorithmException e) {
 				throw new RuntimeException(e);
 			}
+			
 		}
 
 		private String calculateDestinationPath() {

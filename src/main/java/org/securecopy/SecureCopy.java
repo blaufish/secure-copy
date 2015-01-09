@@ -51,7 +51,7 @@ public class SecureCopy {
 
 			try (FileOutputStream fos = new FileOutputStream(
 					destinationFileName)) {
-				byte[] input = new byte[4_000_000];
+				byte[] input = new byte[64_000_000];
 				int readBytes;
 				while ((readBytes = fis.read(input)) != -1) {
 					md.update(input, 0, readBytes);
@@ -139,7 +139,7 @@ public class SecureCopy {
 			lastStatistics = now;
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
-			statisticsLine = String.format("%s of %s (%s/s)...", FileUtils
+			statisticsLine = String.format("%s of %s (%s/s)...  ", FileUtils
 					.byteCountToDisplaySize(sizeCount), FileUtils
 					.byteCountToDisplaySize(bytesToCopy), FileUtils
 					.byteCountToDisplaySize(sizeCount / secondsElapsed));

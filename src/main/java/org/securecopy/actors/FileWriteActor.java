@@ -1,5 +1,6 @@
 package org.securecopy.actors;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,6 +13,8 @@ import org.securecopy.messages.WriteFileMessage;
 public class FileWriteActor extends ReliableActor {
 	private boolean sane;
 	private FileOutputStream fos;
+	private long lastModified;
+	private File dstFile;
 
 	@Override
 	public void onReceive(Message message) {
@@ -39,7 +42,9 @@ public class FileWriteActor extends ReliableActor {
 
 	private void handleCreate(CreateFileMessage msg) {
 		try {
+			dstFile = new File(msg.destinationFileName);
 			fos = new FileOutputStream(msg.destinationFileName);
+			lastModified = msg.lastModified;
 			sane = true;
 		} catch (FileNotFoundException e) {
 			fos = null;
@@ -58,6 +63,7 @@ public class FileWriteActor extends ReliableActor {
 				fos = null;
 			}
 		}
+		dstFile.setLastModified(lastModified);
 	}
 
 }

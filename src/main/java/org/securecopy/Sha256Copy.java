@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.FileUtils;
 import org.securecopy.actors.FileWriteActor;
 import org.securecopy.actors.MessageDigestActor;
 import org.securecopy.actors.ReliableActorFramework;
@@ -19,13 +20,17 @@ import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
 	private static final int NTFS_LARGEST_ALLOCATION_SIZE = 65536;
-	private static final int BLOCKSIZE = 100 * NTFS_LARGEST_ALLOCATION_SIZE;
+	private static final int BLOCKSIZE = 10 * NTFS_LARGEST_ALLOCATION_SIZE;
 	private static ReliableActorFramework actors;
 	private boolean multitheading;
 	private PrintWriter hashPrintWriter;
 
 
 	protected void copyFile(File sourceFile, String destinationFileName) throws FileNotFoundException, IOException, NoSuchAlgorithmException {
+		File dstfile = new File(destinationFileName);
+		if (dstfile.exists() && dstfile.length() == sourceFile.length()) {
+			return ;
+		}
 		if (multitheading) {
 			copyFileMultiThreaded(sourceFile, destinationFileName);
 		}
@@ -38,7 +43,7 @@ public class Sha256Copy implements AutoCloseable {
 			String destinationFileName) throws FileNotFoundException,
 			IOException {
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
-			actors.post(new CreateFileMessage(destinationFileName));
+			actors.post(new CreateFileMessage(destinationFileName, sourceFile.lastModified()));
 			byte[] input = new byte[BLOCKSIZE];
 			int readBytes;
 			while ((readBytes = fis.read(input)) != -1) {

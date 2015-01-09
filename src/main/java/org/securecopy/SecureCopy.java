@@ -99,7 +99,7 @@ public class SecureCopy {
 
 		private void statistics() {
 			long now = System.currentTimeMillis();
-			if ((now - lastStatistics) < 20_000)
+			if ((now - lastStatistics) < 5_000)
 				return;
 			final long secondsElapsed = (now - started) / 1000;
 			if (secondsElapsed <= 0)
@@ -108,7 +108,7 @@ public class SecureCopy {
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
 			final double percentDone = (sizeCount * 100.0) / bytesToCopy;
-			final long secondsLeft = (long) ((100.0 - percentDone) / 100.0 * secondsElapsed);
+			final long secondsLeft = (long) ((secondsElapsed/percentDone) * (100.0 - percentDone));
 			String timeLeft = formatTime(secondsLeft);
 			statisticsLine = String
 					.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",

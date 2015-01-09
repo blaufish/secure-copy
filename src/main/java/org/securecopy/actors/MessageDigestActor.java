@@ -52,7 +52,7 @@ public class MessageDigestActor extends ReliableActor {
 		byte[] digest = md.digest();
 		String hex = Hex.encodeHexString(digest);
 		hashPrintWriter.printf("%s %s\n", hex, filename);
-
+		hashPrintWriter.flush();
 	}
 
 }

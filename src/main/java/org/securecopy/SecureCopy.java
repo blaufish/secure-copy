@@ -70,7 +70,6 @@ public class SecureCopy {
 				currentDirectory.add(directory);
 				currentDestinationPath = calculateDestinationPath();
 			}
-			// System.out.format("Create dir: %s\n", currentDestinationPath);
 			new File(currentDestinationPath).mkdirs();
 			return true;
 		}
@@ -100,7 +99,7 @@ public class SecureCopy {
 
 		private void statistics() {
 			long now = System.currentTimeMillis();
-			if ((now - lastStatistics) < 10_000)
+			if ((now - lastStatistics) < 20_000)
 				return;
 			final long secondsElapsed = (now - started) / 1000;
 			if (secondsElapsed <= 0)
@@ -108,14 +107,27 @@ public class SecureCopy {
 			lastStatistics = now;
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
-			final long percentDone = (sizeCount * 100) / bytesToCopy;
+			final double percentDone = (sizeCount * 100.0) / bytesToCopy;
+			final long secondsLeft = (long) ((100.0 - percentDone) / 100.0 * secondsElapsed);
+			String timeLeft = formatTime(secondsLeft);
 			statisticsLine = String
-					.format("%s of %s, %s%% (%s/s)...  ",
+					.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",
 							FileUtils.byteCountToDisplaySize(sizeCount),
 							FileUtils.byteCountToDisplaySize(bytesToCopy),
 							percentDone,
-							FileUtils.byteCountToDisplaySize(sizeCount / secondsElapsed));
+							FileUtils.byteCountToDisplaySize(sizeCount
+									/ secondsElapsed), timeLeft);
 			System.out.print(statisticsLine);
+		}
+
+		private String formatTime(long seconds) {
+			if (seconds > 3600) {
+				return String.format("%1.1f hours", seconds / 3600.0);
+			} else if (seconds <= 0) {
+				return "N/A";
+			} else {
+				return String.format("%dm %ds", seconds / 60, seconds % 60);
+			}
 		}
 
 		private String calculateDestinationPath() {

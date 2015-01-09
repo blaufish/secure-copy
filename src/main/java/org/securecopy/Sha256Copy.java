@@ -19,7 +19,7 @@ import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
 	private static final int NTFS_LARGEST_ALLOCATION_SIZE = 65536;
-	private static final int BLOCKSIZE = 1000 * NTFS_LARGEST_ALLOCATION_SIZE;
+	private static final int BLOCKSIZE = 100 * NTFS_LARGEST_ALLOCATION_SIZE;
 	private static ReliableActorFramework actors;
 	private boolean multitheading;
 	private PrintWriter hashPrintWriter;

@@ -10,15 +10,43 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.codec.binary.Hex;
+import org.securecopy.actors.FileWriteActor;
+import org.securecopy.actors.MessageDigestActor;
+import org.securecopy.actors.ReliableActorFramework;
+import org.securecopy.messages.CloseFileMessage;
+import org.securecopy.messages.CreateFileMessage;
+import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
+	private static ReliableActorFramework actors;
+	private boolean multitheading;
 	private PrintWriter hashPrintWriter;
 
-	protected Sha256Copy(PrintWriter hashPrintWriter) {
-		this.hashPrintWriter = hashPrintWriter;
+
+	protected void copyFile(File sourceFile, String destinationFileName) throws FileNotFoundException, IOException, NoSuchAlgorithmException {
+		if (multitheading) {
+			copyFileMultiThreaded(sourceFile, destinationFileName);
+		}
+		else {
+			copyFileSingleThreaded(sourceFile, destinationFileName);
+		}		
 	}
 
-	protected void copyFile(File sourceFile, String destinationFileName)
+	private void copyFileMultiThreaded(File sourceFile,
+			String destinationFileName) throws FileNotFoundException,
+			IOException {
+		try (FileInputStream fis = new FileInputStream(sourceFile)) {
+			actors.post(new CreateFileMessage(destinationFileName));
+			byte[] input = new byte[64_000_000];
+			int readBytes;
+			while ((readBytes = fis.read(input)) != -1) {
+				actors.post(new WriteFileMessage(input, readBytes));
+			}
+			actors.post(new CloseFileMessage());
+		}
+	}
+
+	private void copyFileSingleThreaded(File sourceFile, String destinationFileName)
 			throws FileNotFoundException, IOException, NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
@@ -38,18 +66,24 @@ public class Sha256Copy implements AutoCloseable {
 		}
 	}
 
-	public static Sha256Copy initilize(String destination)
-			throws FileNotFoundException {
+	public static Sha256Copy initilize(String destination, boolean multithreading)
+			throws FileNotFoundException, NoSuchAlgorithmException {
 		new File(destination).mkdirs();
 		String hashfilename = String.format("%s%s%s-%d.txt", destination,
 				File.separator, "sha256", System.currentTimeMillis());
-		PrintWriter hashPrintWriter = new PrintWriter(hashfilename);
-		Sha256Copy object = new Sha256Copy(hashPrintWriter);
+		Sha256Copy object = new Sha256Copy();
+		object.hashPrintWriter = new PrintWriter(hashfilename);
+		object.multitheading = multithreading;
+		if (multithreading) {
+			actors = new ReliableActorFramework(new FileWriteActor(), new MessageDigestActor(object.hashPrintWriter));
+			actors.start();
+		}
 		return object;
 	}
 
 	@Override
 	public void close() throws Exception {
+		actors.stop();
 		if (hashPrintWriter != null)
 			hashPrintWriter.close();
 	}

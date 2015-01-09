@@ -1,18 +1,13 @@
 package org.securecopy;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.DirectoryWalker;
 import org.apache.commons.io.FileUtils;
 
@@ -33,55 +28,31 @@ public class SecureCopy {
 				files.size(), lister.dirCount, lister.fileCount,
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
-		new File(destination).mkdirs();
-		String hashfilename = String.format("%s%s%s-%d.txt", destination,
-				File.separator, "sha256", System.currentTimeMillis());
-		try (PrintWriter hashPrintWriter = new PrintWriter(hashfilename)) {
-			CopyUtility cu = new CopyUtility();
-			cu.copyFiles(source, destination, hashPrintWriter, lister.sizeCount);
+		try (Sha256Copy copier = Sha256Copy.initilize(destination)) {
+			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
+			cu.copyFiles(source, destination);
 		}
 
 	}
 
-	private static void copyFile(File sourceFile, String destinationFileName,
-			PrintWriter hashprinter) throws FileNotFoundException, IOException,
-			NoSuchAlgorithmException {
-		MessageDigest md = MessageDigest.getInstance("SHA-256");
-		try (FileInputStream fis = new FileInputStream(sourceFile)) {
-
-			try (FileOutputStream fos = new FileOutputStream(
-					destinationFileName)) {
-				byte[] input = new byte[64_000_000];
-				int readBytes;
-				while ((readBytes = fis.read(input)) != -1) {
-					md.update(input, 0, readBytes);
-					fos.write(input, 0, readBytes);
-				}
-				byte[] digest = md.digest();
-				String hex = Hex.encodeHexString(digest);
-				hashprinter.printf("%s %s\n", hex, destinationFileName);
-			}
-		}
-	}
-
-	static class CopyUtility extends DirectoryWalker<File> {
-		String destination;
-		PrintWriter hashPrintWriter;
+	private static class CopyUtility extends DirectoryWalker<File> {
+		final String destination;
+		final long bytesToCopy;
+		final long started;
+		final Sha256Copy sha256copy;
 		List<File> currentDirectory = new ArrayList<File>();
 		String currentDestinationPath = null;
-		int fileCount = 0;
-		int dirCount = 0;
 		long sizeCount = 0;
-		long bytesToCopy;
-		long started;
 
-		public Collection<File> copyFiles(String source, String destination,
-				PrintWriter hashPrintWriter, long bytesToCopy) throws Exception {
+		public CopyUtility(String destination, long bytesToCopy, Sha256Copy sha256copy) throws FileNotFoundException {
+			super();
 			this.destination = destination;
-			this.hashPrintWriter = hashPrintWriter;
 			this.bytesToCopy = bytesToCopy;
+			this.sha256copy = sha256copy;
 			this.started = System.currentTimeMillis();
+		}
 
+		public Collection<File> copyFiles(String source, String destination) throws Exception {
 			File sourceDirectory = new File(source);
 
 			Collection<File> files = new ArrayList<File>();
@@ -96,7 +67,6 @@ public class SecureCopy {
 			if (depth == 0) {
 				currentDestinationPath = destination;
 			} else {
-				dirCount++;
 				currentDirectory.add(directory);
 				currentDestinationPath = calculateDestinationPath();
 			}
@@ -114,12 +84,11 @@ public class SecureCopy {
 
 		@Override
 		protected void handleFile(File file, int depth, Collection<File> results) {
-			fileCount++;
 			sizeCount += file.length();
 			try {
 				String destinationFileName = currentDestinationPath
 						+ File.separator + file.getName();
-				copyFile(file, destinationFileName, hashPrintWriter);
+				sha256copy.copyFile(file, destinationFileName);
 			} catch (IOException | NoSuchAlgorithmException e) {
 				throw new RuntimeException(e);
 			}
@@ -139,10 +108,13 @@ public class SecureCopy {
 			lastStatistics = now;
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
-			statisticsLine = String.format("%s of %s (%s/s)...  ", FileUtils
-					.byteCountToDisplaySize(sizeCount), FileUtils
-					.byteCountToDisplaySize(bytesToCopy), FileUtils
-					.byteCountToDisplaySize(sizeCount / secondsElapsed));
+			final long percentDone = (sizeCount * 100) / bytesToCopy;
+			statisticsLine = String
+					.format("%s of %s, %s%% (%s/s)...  ",
+							FileUtils.byteCountToDisplaySize(sizeCount),
+							FileUtils.byteCountToDisplaySize(bytesToCopy),
+							percentDone,
+							FileUtils.byteCountToDisplaySize(sizeCount / secondsElapsed));
 			System.out.print(statisticsLine);
 		}
 

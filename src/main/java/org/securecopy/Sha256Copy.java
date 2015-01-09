@@ -18,6 +18,8 @@ import org.securecopy.messages.CreateFileMessage;
 import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
+	private static final int NTFS_LARGEST_ALLOCATION_SIZE = 65536;
+	private static final int BLOCKSIZE = 1000 * NTFS_LARGEST_ALLOCATION_SIZE;
 	private static ReliableActorFramework actors;
 	private boolean multitheading;
 	private PrintWriter hashPrintWriter;
@@ -37,7 +39,7 @@ public class Sha256Copy implements AutoCloseable {
 			IOException {
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
 			actors.post(new CreateFileMessage(destinationFileName));
-			byte[] input = new byte[64_000_000];
+			byte[] input = new byte[BLOCKSIZE];
 			int readBytes;
 			while ((readBytes = fis.read(input)) != -1) {
 				actors.post(new WriteFileMessage(input, readBytes));
@@ -53,7 +55,7 @@ public class Sha256Copy implements AutoCloseable {
 
 			try (FileOutputStream fos = new FileOutputStream(
 					destinationFileName)) {
-				byte[] input = new byte[64_000_000];
+				byte[] input = new byte[BLOCKSIZE];
 				int readBytes;
 				while ((readBytes = fis.read(input)) != -1) {
 					md.update(input, 0, readBytes);

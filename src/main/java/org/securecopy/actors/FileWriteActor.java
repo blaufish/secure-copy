@@ -43,7 +43,7 @@ public class FileWriteActor extends ReliableActor {
 	private void handleCreate(CreateFileMessage msg) {
 		try {
 			dstFile = new File(msg.destinationFileName);
-			fos = new FileOutputStream(msg.destinationFileName);
+			fos = new FileOutputStream(msg.destinationFileName, false);
 			lastModified = msg.lastModified;
 			sane = true;
 		} catch (FileNotFoundException e) {

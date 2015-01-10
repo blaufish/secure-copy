@@ -28,7 +28,7 @@ public class SecureCopy {
 				files.size(), lister.dirCount, lister.fileCount,
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
-		try (Sha256Copy copier = Sha256Copy.initilize(destination, true)) {
+		try (Sha256Copy copier = Sha256Copy.initilize(destination)) {
 			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
 			cu.copyFiles(source, destination);
 		}

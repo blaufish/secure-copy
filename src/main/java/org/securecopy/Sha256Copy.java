@@ -16,21 +16,18 @@ import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
 	private static final int NTFS_LARGEST_ALLOCATION_SIZE = 65536;
-	private static final int BLOCKSIZE = 10 * NTFS_LARGEST_ALLOCATION_SIZE;
+	private static final int BLOCKSIZE = 1000 * NTFS_LARGEST_ALLOCATION_SIZE;
 	private final ReliableActorFramework actors;
 	private final PrintWriter hashPrintWriter;
 
-	private Sha256Copy(ReliableActorFramework actors, PrintWriter hashPrintWriter) {
+	private Sha256Copy(ReliableActorFramework actors,
+			PrintWriter hashPrintWriter) {
 		this.actors = actors;
 		this.hashPrintWriter = hashPrintWriter;
 	}
 
 	protected void copyFile(File sourceFile, String destinationFileName)
-			throws FileNotFoundException, IOException, NoSuchAlgorithmException {
-		File dstfile = new File(destinationFileName);
-		if (dstfile.exists() && dstfile.length() == sourceFile.length()) {
-			return;
-		}
+			throws FileNotFoundException, IOException {
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
 			actors.post(new CreateFileMessage(destinationFileName, sourceFile
 					.lastModified()));

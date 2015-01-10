@@ -3,7 +3,6 @@ package org.securecopy;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,12 +36,12 @@ public class SecureCopy {
 
 	private static class CopyUtility extends DirectoryWalker<File> {
 		final String destination;
-		final long bytesToCopy;
 		final long started;
 		final Sha256Copy sha256copy;
 		List<File> currentDirectory = new ArrayList<File>();
 		String currentDestinationPath = null;
-		long sizeCount = 0;
+		long bytesToCopy;
+		long bytesCopied = 0;
 
 		public CopyUtility(String destination, long bytesToCopy, Sha256Copy sha256copy) throws FileNotFoundException {
 			super();
@@ -83,12 +82,22 @@ public class SecureCopy {
 
 		@Override
 		protected void handleFile(File file, int depth, Collection<File> results) {
-			sizeCount += file.length();
+			String destinationFileName = currentDestinationPath
+					+ File.separator + file.getName();
+			
+			File dstfile = new File(destinationFileName);
+			
+			if (dstfile.exists() && dstfile.length() == file.length()) {
+				bytesToCopy -= file.length();
+				return;
+			}
+			else {
+				bytesCopied += file.length();				
+			}
+
 			try {
-				String destinationFileName = currentDestinationPath
-						+ File.separator + file.getName();
 				sha256copy.copyFile(file, destinationFileName);
-			} catch (IOException | NoSuchAlgorithmException e) {
+			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
 			statistics();
@@ -107,15 +116,15 @@ public class SecureCopy {
 			lastStatistics = now;
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
-			final double percentDone = (sizeCount * 100.0) / bytesToCopy;
+			final double percentDone = (bytesCopied * 100.0) / bytesToCopy;
 			final long secondsLeft = (long) ((secondsElapsed/percentDone) * (100.0 - percentDone));
 			String timeLeft = formatTime(secondsLeft);
 			statisticsLine = String
 					.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",
-							FileUtils.byteCountToDisplaySize(sizeCount),
+							FileUtils.byteCountToDisplaySize(bytesCopied),
 							FileUtils.byteCountToDisplaySize(bytesToCopy),
 							percentDone,
-							FileUtils.byteCountToDisplaySize(sizeCount
+							FileUtils.byteCountToDisplaySize(bytesCopied
 									/ secondsElapsed), timeLeft);
 			System.out.print(statisticsLine);
 		}

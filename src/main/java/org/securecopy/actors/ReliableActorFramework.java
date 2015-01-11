@@ -55,7 +55,7 @@ public class ReliableActorFramework {
 
 		private ActorRunnable(ReliableActor actor) {
 			this.actor = actor;
-			this.queue = new ArrayBlockingQueue<Message>(50);
+			this.queue = new ArrayBlockingQueue<Message>(25);
 		}
 
 		public void run() {

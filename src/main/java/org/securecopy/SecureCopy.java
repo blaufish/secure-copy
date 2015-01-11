@@ -1,11 +1,13 @@
 package org.securecopy;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.TreeMap;
 
 import org.apache.commons.io.DirectoryWalker;
 import org.apache.commons.io.FileUtils;
@@ -21,17 +23,59 @@ public class SecureCopy {
 		final String source = args[0];
 		String destination = args[1];
 
+		System.out.format("Index %s...\n", source);
 		ListFileUtility lister = new ListFileUtility();
 		Collection<File> files = lister.listFiles(source);
 		System.out.format("Entries: %d Dirs: %d Files: %d Size: %s\n",
 				files.size(), lister.dirCount, lister.fileCount,
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
-		try (Sha256Copy copier = Sha256Copy.initilize(destination)) {
+		int blocksize = benchmark(lister.largestFile);
+		
+		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
 			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
 			cu.copyFiles(source, destination);
 		}
 
+	}
+
+	private static int benchmark(File largestFile) throws IOException {
+		System.out
+				.format("Benchmarking on %s:\n", largestFile.getAbsolutePath());
+		TreeMap<Long, Integer> timeToBlockSize = new TreeMap<Long, Integer>();
+		final int blockbasesize = 1024;
+		try (FileInputStream fis = new FileInputStream(largestFile)) {
+			//warm up so startup issues doesn't affect benchmarking
+			benchmarkRead1GB(fis, blockbasesize);
+		}
+		for (int i = 1; i < 10000; i *= 4) {
+			try (FileInputStream fis = new FileInputStream(largestFile)) {
+				int blocksize = blockbasesize * i;
+				final long time = benchmarkRead1GB(fis, blocksize);
+				System.out.printf("   %8d %.1fs\n", blocksize, time / 1000.0);
+				timeToBlockSize.put(time, blocksize);
+			}
+		}
+		Integer optimalBlocksize = timeToBlockSize.firstEntry().getValue();
+		System.out.format("Selected blocksize: %d\n", optimalBlocksize);
+		return optimalBlocksize;
+	}
+
+	private static long benchmarkRead1GB(FileInputStream fis, int blocksize)
+			throws IOException {
+		long started;
+		long stopped;
+		byte[] input = new byte[blocksize];
+		int readBytes;
+		long totalReadBytes = 0;
+		started = System.currentTimeMillis();
+		while (((readBytes = fis.read(input)) != -1)
+				&& totalReadBytes < 1_000_000_000) {
+			totalReadBytes += readBytes;
+		}
+		stopped = System.currentTimeMillis();
+		final long time = stopped - started;
+		return time;
 	}
 
 	private static class CopyUtility extends DirectoryWalker<File> {

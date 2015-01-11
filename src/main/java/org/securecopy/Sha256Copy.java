@@ -15,15 +15,15 @@ import org.securecopy.messages.CreateFileMessage;
 import org.securecopy.messages.WriteFileMessage;
 
 public class Sha256Copy implements AutoCloseable {
-	private static final int NTFS_LARGEST_ALLOCATION_SIZE = 65536;
-	private static final int BLOCKSIZE = 100 * NTFS_LARGEST_ALLOCATION_SIZE;
 	private final ReliableActorFramework actors;
 	private final PrintWriter hashPrintWriter;
+	private final int blocksize;
 
 	private Sha256Copy(ReliableActorFramework actors,
-			PrintWriter hashPrintWriter) {
+			PrintWriter hashPrintWriter, int blocksize) {
 		this.actors = actors;
 		this.hashPrintWriter = hashPrintWriter;
+		this.blocksize = blocksize;
 	}
 
 	protected void copyFile(File sourceFile, String destinationFileName)
@@ -31,7 +31,7 @@ public class Sha256Copy implements AutoCloseable {
 		try (FileInputStream fis = new FileInputStream(sourceFile)) {
 			actors.post(new CreateFileMessage(destinationFileName, sourceFile
 					.lastModified()));
-			byte[] input = new byte[BLOCKSIZE];
+			byte[] input = new byte[blocksize];
 			int readBytes;
 			while ((readBytes = fis.read(input)) != -1) {
 				actors.post(new WriteFileMessage(input, readBytes));
@@ -40,7 +40,7 @@ public class Sha256Copy implements AutoCloseable {
 		}
 	}
 
-	public static Sha256Copy initilize(String destination)
+	public static Sha256Copy initilize(String destination, int blocksize)
 			throws FileNotFoundException, NoSuchAlgorithmException {
 		new File(destination).mkdirs();
 		String hashfilename = String.format("%s%s%s-%d.txt", destination,
@@ -49,7 +49,7 @@ public class Sha256Copy implements AutoCloseable {
 		ReliableActorFramework actors = new ReliableActorFramework(
 				new FileWriteActor(), new MessageDigestActor(hashPrintWriter));
 		actors.start();
-		Sha256Copy object = new Sha256Copy(actors, hashPrintWriter);
+		Sha256Copy object = new Sha256Copy(actors, hashPrintWriter, blocksize);
 		return object;
 	}
 

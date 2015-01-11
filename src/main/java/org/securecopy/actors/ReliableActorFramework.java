@@ -9,11 +9,11 @@ public class ReliableActorFramework {
 	private final ActorRunnable[] runners;
 	private final Thread[] threads;
 
-	public ReliableActorFramework(ReliableActor... actors) {
+	public ReliableActorFramework(long queueDepth, ReliableActor... actors) {
 		runners = new ActorRunnable[actors.length];
 		threads = new Thread[actors.length];
 		for (int i = 0; i < actors.length; i++) {
-			runners[i] = new ActorRunnable(actors[i]);
+			runners[i] = new ActorRunnable(queueDepth, actors[i]);
 			threads[i] = new Thread(runners[i]);
 		}
 	}
@@ -50,12 +50,15 @@ public class ReliableActorFramework {
 	}
 
 	private static class ActorRunnable implements Runnable {
+		private static final int MAXIMUM_SANE_QUEUE_DEPTH = 100_000;
 		private final ReliableActor actor;
 		private final ArrayBlockingQueue<Message> queue;
 
-		private ActorRunnable(ReliableActor actor) {
+		private ActorRunnable(long queueDepth, ReliableActor actor) {
+			final int saneQueueDepth = queueDepth < MAXIMUM_SANE_QUEUE_DEPTH ? (int) queueDepth
+					: MAXIMUM_SANE_QUEUE_DEPTH;
 			this.actor = actor;
-			this.queue = new ArrayBlockingQueue<Message>(25);
+			this.queue = new ArrayBlockingQueue<Message>(saneQueueDepth);
 		}
 
 		public void run() {

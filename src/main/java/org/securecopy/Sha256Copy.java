@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.NoSuchAlgorithmException;
 
+import org.apache.commons.io.FileUtils;
 import org.securecopy.actors.FileWriteActor;
 import org.securecopy.actors.MessageDigestActor;
 import org.securecopy.actors.ReliableActorFramework;
@@ -46,7 +47,12 @@ public class Sha256Copy implements AutoCloseable {
 		String hashfilename = String.format("%s%s%s-%d.txt", destination,
 				File.separator, "sha256", System.currentTimeMillis());
 		PrintWriter hashPrintWriter = new PrintWriter(hashfilename);
-		ReliableActorFramework actors = new ReliableActorFramework(
+		final long queueDepth = Runtime.getRuntime().freeMemory() / 2
+				/ blocksize;
+		System.out.format("Queue depth: up to [%d] of [%d] blocks (%s)\n",
+				queueDepth, blocksize,
+				FileUtils.byteCountToDisplaySize(queueDepth * blocksize));
+		ReliableActorFramework actors = new ReliableActorFramework(queueDepth,
 				new FileWriteActor(), new MessageDigestActor(hashPrintWriter));
 		actors.start();
 		Sha256Copy object = new Sha256Copy(actors, hashPrintWriter, blocksize);

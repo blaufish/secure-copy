@@ -91,14 +91,13 @@ public class SecureCopy {
 				bytesToCopy -= file.length();
 				return;
 			}
-			else {
-				bytesCopied += file.length();				
-			}
 
 			try {
 				sha256copy.copyFile(file, destinationFileName);
+				bytesCopied += file.length();				
 			} catch (IOException e) {
-				throw new RuntimeException(e);
+				System.out.printf("\nFile not found: %s\n", e.getMessage());
+				bytesToCopy -= file.length();
 			}
 			statistics();
 		}

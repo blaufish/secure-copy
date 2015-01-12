@@ -3,7 +3,9 @@ package org.securecopy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -15,14 +17,26 @@ import org.apache.commons.io.FileUtils;
 public class SecureCopy {
 
 	public static void main(String... args) throws Exception {
-		if (args.length != 2) {
-			System.out.println("SecureCopy <source> <destination>");
-			return;
+		if (args.length == 3 && args[0].equals("--copy")) {
+			final String source = args[1];
+			String destination = args[2];
+			copy(source, destination);
+		} else if (args.length == 2 && args[0].equals("--verify")) {
+			final String destination = args[1];
+			Sha256Verify verify = new Sha256Verify();
+			verify.verify(destination);
 		}
+		else {
+			System.out.println("SecureCopy --copy <source> <destination>");
+			System.out.println("SecureCopy --verify <destination>");
+		}
+		return;
 
-		final String source = args[0];
-		String destination = args[1];
+	}
 
+	private static void copy(final String source, String destination)
+			throws IOException, FileNotFoundException, Exception,
+			NoSuchAlgorithmException {
 		System.out.format("Index %s...\n", source);
 		ListFileUtility lister = new ListFileUtility();
 		Collection<File> files = lister.listFiles(source);
@@ -31,21 +45,21 @@ public class SecureCopy {
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
 		int blocksize = benchmark(lister.largestFile);
-		
+
 		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
-			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
+			CopyUtility cu = new CopyUtility(destination, lister.sizeCount,
+					copier);
 			cu.copyFiles(source, destination);
 		}
-
 	}
 
 	private static int benchmark(File largestFile) throws IOException {
-		System.out
-				.format("Benchmarking on %s:\n", largestFile.getAbsolutePath());
+		System.out.format("Benchmarking on %s:\n",
+				largestFile.getAbsolutePath());
 		TreeMap<Long, Integer> timeToBlockSize = new TreeMap<Long, Integer>();
 		final int blockbasesize = 1024;
 		try (FileInputStream fis = new FileInputStream(largestFile)) {
-			//warm up so startup issues doesn't affect benchmarking
+			// warm up so startup issues doesn't affect benchmarking
 			benchmarkRead1GB(fis, blockbasesize);
 		}
 		for (int i = 1; i < 10000; i *= 4) {
@@ -87,7 +101,8 @@ public class SecureCopy {
 		long bytesToCopy;
 		long bytesCopied = 0;
 
-		public CopyUtility(String destination, long bytesToCopy, Sha256Copy sha256copy) throws FileNotFoundException {
+		public CopyUtility(String destination, long bytesToCopy,
+				Sha256Copy sha256copy) throws FileNotFoundException {
 			super();
 			this.destination = destination;
 			this.bytesToCopy = bytesToCopy;
@@ -95,7 +110,8 @@ public class SecureCopy {
 			this.started = System.currentTimeMillis();
 		}
 
-		public Collection<File> copyFiles(String source, String destination) throws Exception {
+		public Collection<File> copyFiles(String source, String destination)
+				throws Exception {
 			File sourceDirectory = new File(source);
 
 			Collection<File> files = new ArrayList<File>();
@@ -128,9 +144,9 @@ public class SecureCopy {
 		protected void handleFile(File file, int depth, Collection<File> results) {
 			String destinationFileName = currentDestinationPath
 					+ File.separator + file.getName();
-			
+
 			File dstfile = new File(destinationFileName);
-			
+
 			if (dstfile.exists() && dstfile.length() == file.length()) {
 				bytesToCopy -= file.length();
 				return;
@@ -138,7 +154,7 @@ public class SecureCopy {
 
 			try {
 				sha256copy.copyFile(file, destinationFileName);
-				bytesCopied += file.length();				
+				bytesCopied += file.length();
 			} catch (IOException e) {
 				System.out.printf("\nFile not found: %s\n", e.getMessage());
 				bytesToCopy -= file.length();
@@ -160,7 +176,7 @@ public class SecureCopy {
 			for (int i = 0; i < statisticsLine.length(); i++)
 				System.out.print("\b");
 			final double percentDone = (bytesCopied * 100.0) / bytesToCopy;
-			final long secondsLeft = (long) ((secondsElapsed/percentDone) * (100.0 - percentDone));
+			final long secondsLeft = (long) ((secondsElapsed / percentDone) * (100.0 - percentDone));
 			String timeLeft = formatTime(secondsLeft);
 			statisticsLine = String
 					.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",

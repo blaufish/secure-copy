@@ -30,7 +30,6 @@ public class Sha256Verify {
 		verify(files);
 	}
 	public void verify(File[] sha256files) throws IOException {
-		String output = "";
 		Map<String, String> fileSha256Map = new TreeMap<>();
 		for (File file : sha256files) {
 			List<String> lines = FileUtils.readLines(file);
@@ -55,14 +54,21 @@ public class Sha256Verify {
 			} catch (NoSuchAlgorithmException | IOException e) {
 				filesError++;
 			}
-			for (int i = 0; i < output.length(); i++)
-				System.out.print("\b");
-			double progress = (filesVerified+filesBad+filesError) * 100.0 / filesToVerify;
-			output = String.format("Verifying: %1.1f%%, bad: %d error: %d  ", progress, filesBad, filesError);
-			System.out.print(output);
+			statistics();
 		}
 		
 
+	}
+	
+	String output = "";
+	long lastStatistics = 0;
+	private void statistics() {
+		if (System.currentTimeMillis() - lastStatistics < 5000) return;
+		for (int i = 0; i < output.length(); i++)
+			System.out.print("\b");
+		double progress = (filesVerified+filesBad+filesError) * 100.0 / filesToVerify;
+		output = String.format("Verifying: %1.1f%%, bad: %d error: %d  ", progress, filesBad, filesError);
+		System.out.print(output);
 	}
 	
 	private String sha256sum(String filename) throws NoSuchAlgorithmException,

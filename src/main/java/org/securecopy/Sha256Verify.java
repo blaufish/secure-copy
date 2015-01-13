@@ -50,9 +50,13 @@ public class Sha256Verify {
 				}
 				else {
 					filesBad++;
+					output = "";
+					System.out.printf("\nHash verification failed: %s\n", filename);
 				}
 			} catch (NoSuchAlgorithmException | IOException e) {
 				filesError++;
+				output = "";
+				System.out.printf("\nIO ERROR: %s %s\n", filename, e.getMessage());
 			}
 			statistics();
 		}
@@ -67,7 +71,7 @@ public class Sha256Verify {
 		for (int i = 0; i < output.length(); i++)
 			System.out.print("\b");
 		double progress = (filesVerified+filesBad+filesError) * 100.0 / filesToVerify;
-		output = String.format("Verifying: %1.1f%%, bad: %d error: %d  ", progress, filesBad, filesError);
+		output = String.format("Verifying: %1.1f%%, verified successfully: %d bad: %d error: %d  ", progress, filesVerified, filesBad, filesError);
 		System.out.print(output);
 	}
 	

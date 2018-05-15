@@ -1,0 +1,1 @@
+java -cp target\classes;target\lib\commons-io-2.4.jar;target\classes;target\lib\commons-codec-1.10.jar org.securecopy.SecureCopy %*

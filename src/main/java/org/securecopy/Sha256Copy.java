@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
 import org.securecopy.actors.FileWriteActor;
@@ -35,7 +36,13 @@ public class Sha256Copy implements AutoCloseable {
 			byte[] input = new byte[blocksize];
 			int readBytes;
 			while ((readBytes = fis.read(input)) != -1) {
+				if (readBytes < input.length/4) {
+					//Drop unused memory early
+					input = Arrays.copyOf(input, readBytes);
+				}
 				actors.post(new WriteFileMessage(input, readBytes));
+				//Get a new fresh block of memory
+				input = new byte[blocksize];
 			}
 			actors.post(new CloseFileMessage());
 		}

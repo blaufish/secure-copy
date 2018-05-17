@@ -6,7 +6,7 @@ File system is presumed user-friendly (no permission problems, no disk errors).
 
 ## Usage
 * `SecureCopy --copy source_folder destination_folder` copies a source folder to the destination folder and creates **destination/sha256-(date).txt**. (date) is the seconds since epoch.
-* `SecureCopy --copy folder`  locates `sha256-(date).txt`
+* `SecureCopy --verify folder`  locates **folder/sha256-(date).txt** and verifies if files in folder match SHA256 sums..
 
 ```
 secure-copy.cmd --copy F:\media\2015 Z:\media\2015

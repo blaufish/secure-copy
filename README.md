@@ -5,7 +5,7 @@ Audience interested in this tool is primarily video editors taking backups of ma
 File system is presumed user-friendly (no permission problems, no disk errors).
 
 ## Usage
-* `SecureCopy --copy source_folder destination_folder` copies a source folder to the destination folder and creates `destination folder / sha256-(date).txt`. (date) is the seconds since epoch.
+* `SecureCopy --copy source_folder destination_folder` copies a source folder to the destination folder and creates **destination/sha256-(date).txt**. (date) is the seconds since epoch.
 * `SecureCopy --copy folder`  locates `sha256-(date).txt`
 
 ```
@@ -44,7 +44,7 @@ Eclipse how-to.
 * Right click project and select Run as -> Maven -> Maven Install. 
 
 ## Licence
-Licensed under MIT License, no strings attached.
+Licensed under [MIT License](LICENSE), no strings attached.
 Code is okay for re-use in open source projects, commercial projects, personal projects.
 Be a nice person and tell me I rock if the code was helpful to you.
 If you find a bug and produce a great fix, I'll merge smaller PR's that look good.

@@ -27,6 +27,10 @@ public class Sha256Verify {
 				return name.matches("sha256-.*\\.txt");
 			}
 		});
+		if (files == null) {
+			System.out.printf("\nError, no files found: %s\n", destination);
+			return ;
+		}
 		verify(files);
 	}
 	public void verify(File[] sha256files) throws IOException {

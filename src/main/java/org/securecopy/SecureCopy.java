@@ -148,6 +148,7 @@ public class SecureCopy {
 
 			if (dstfile.exists() && dstfile.length() == file.length()) {
 				bytesToCopy -= file.length();
+				statistics();
 				return;
 			}
 
@@ -166,6 +167,10 @@ public class SecureCopy {
 
 		private void statistics() {
 			long now = System.currentTimeMillis();
+			if (lastStatistics == 0) {
+				lastStatistics = now;
+				return;
+			}
 			if ((now - lastStatistics) < 5_000)
 				return;
 			final long secondsElapsed = (now - started) / 1000;

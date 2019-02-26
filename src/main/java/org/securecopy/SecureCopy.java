@@ -24,8 +24,7 @@ public class SecureCopy {
 			final String destination = args[1];
 			Sha256Verify verify = new Sha256Verify();
 			verify.verify(destination);
-		}
-		else {
+		} else {
 			System.out.println("SecureCopy --copy <source> <destination>");
 			System.out.println("SecureCopy --verify <destination>");
 		}
@@ -34,27 +33,23 @@ public class SecureCopy {
 	}
 
 	private static void copy(final String source, String destination)
-			throws IOException, FileNotFoundException, Exception,
-			NoSuchAlgorithmException {
+			throws IOException, FileNotFoundException, Exception, NoSuchAlgorithmException {
 		System.out.format("Index %s...\n", source);
 		ListFileUtility lister = new ListFileUtility();
 		Collection<File> files = lister.listFiles(source);
-		System.out.format("Entries: %d Dirs: %d Files: %d Size: %s\n",
-				files.size(), lister.dirCount, lister.fileCount,
+		System.out.format("Entries: %d Dirs: %d Files: %d Size: %s\n", files.size(), lister.dirCount, lister.fileCount,
 				FileUtils.byteCountToDisplaySize(lister.sizeCount));
 
 		int blocksize = benchmark(lister.largestFile);
 
 		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
-			CopyUtility cu = new CopyUtility(destination, lister.sizeCount,
-					copier);
+			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
 			cu.copyFiles(source, destination);
 		}
 	}
 
 	private static int benchmark(File largestFile) throws IOException {
-		System.out.format("Benchmarking on %s:\n",
-				largestFile.getAbsolutePath());
+		System.out.format("Benchmarking on %s:\n", largestFile.getAbsolutePath());
 		TreeMap<Long, Integer> timeToBlockSize = new TreeMap<Long, Integer>();
 		final int blockbasesize = 1024;
 		try (FileInputStream fis = new FileInputStream(largestFile)) {
@@ -74,16 +69,14 @@ public class SecureCopy {
 		return optimalBlocksize;
 	}
 
-	private static long benchmarkRead1GB(FileInputStream fis, int blocksize)
-			throws IOException {
+	private static long benchmarkRead1GB(FileInputStream fis, int blocksize) throws IOException {
 		long started;
 		long stopped;
 		byte[] input = new byte[blocksize];
 		int readBytes;
 		long totalReadBytes = 0;
 		started = System.currentTimeMillis();
-		while (((readBytes = fis.read(input)) != -1)
-				&& totalReadBytes < 1_000_000_000) {
+		while (((readBytes = fis.read(input)) != -1) && totalReadBytes < 1_000_000_000) {
 			totalReadBytes += readBytes;
 		}
 		stopped = System.currentTimeMillis();
@@ -100,8 +93,7 @@ public class SecureCopy {
 		long bytesToCopy;
 		long bytesCopied = 0;
 
-		public CopyUtility(String destination, long bytesToCopy,
-				Sha256Copy sha256copy) throws FileNotFoundException {
+		public CopyUtility(String destination, long bytesToCopy, Sha256Copy sha256copy) throws FileNotFoundException {
 			super();
 			this.destination = destination;
 			this.bytesToCopy = bytesToCopy;
@@ -109,8 +101,7 @@ public class SecureCopy {
 			this.started = System.currentTimeMillis();
 		}
 
-		public Collection<File> copyFiles(String source, String destination)
-				throws Exception {
+		public Collection<File> copyFiles(String source, String destination) throws Exception {
 			File sourceDirectory = new File(source);
 
 			Collection<File> files = new ArrayList<File>();
@@ -120,8 +111,7 @@ public class SecureCopy {
 		}
 
 		@Override
-		protected boolean handleDirectory(File directory, int depth,
-				Collection<File> results) {
+		protected boolean handleDirectory(File directory, int depth, Collection<File> results) {
 			if (depth == 0) {
 				currentDestinationPath = destination;
 			} else {
@@ -133,16 +123,14 @@ public class SecureCopy {
 		}
 
 		@Override
-		protected void handleDirectoryEnd(File directory, int depth,
-				Collection<File> results) {
+		protected void handleDirectoryEnd(File directory, int depth, Collection<File> results) {
 			currentDirectory.remove(directory);
 			currentDestinationPath = calculateDestinationPath();
 		}
 
 		@Override
 		protected void handleFile(File file, int depth, Collection<File> results) {
-			String destinationFileName = currentDestinationPath
-					+ File.separator + file.getName();
+			String destinationFileName = currentDestinationPath + File.separator + file.getName();
 
 			File dstfile = new File(destinationFileName);
 
@@ -182,13 +170,9 @@ public class SecureCopy {
 			final double percentDone = (bytesCopied * 100.0) / bytesToCopy;
 			final long secondsLeft = (long) ((secondsElapsed / percentDone) * (100.0 - percentDone));
 			String timeLeft = formatTime(secondsLeft);
-			statisticsLine = String
-					.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",
-							FileUtils.byteCountToDisplaySize(bytesCopied),
-							FileUtils.byteCountToDisplaySize(bytesToCopy),
-							percentDone,
-							FileUtils.byteCountToDisplaySize(bytesCopied
-									/ secondsElapsed), timeLeft);
+			statisticsLine = String.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",
+					FileUtils.byteCountToDisplaySize(bytesCopied), FileUtils.byteCountToDisplaySize(bytesToCopy),
+					percentDone, FileUtils.byteCountToDisplaySize(bytesCopied / secondsElapsed), timeLeft);
 			System.out.print(statisticsLine);
 		}
 

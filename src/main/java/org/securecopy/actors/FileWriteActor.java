@@ -29,8 +29,9 @@ public class FileWriteActor extends ReliableActor {
 	}
 
 	private void handleWrite(WriteFileMessage msg) {
-		if (!sane) return ;
-		
+		if (!sane)
+			return;
+
 		try {
 			fos.write(msg.bytes, 0, msg.byteCount);
 		} catch (IOException e) {

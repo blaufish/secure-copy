@@ -36,7 +36,7 @@ public class MessageDigestActor extends ReliableActor {
 	private void handleCreate(CreateFileMessage msg) {
 		md.reset();
 		filename = msg.destinationFileName;
-		
+
 		sane = true;
 	}
 

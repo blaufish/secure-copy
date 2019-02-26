@@ -20,6 +20,7 @@ public class Sha256Verify {
 	long filesVerified = 0;
 	long filesBad = 0;
 	long filesError = 0;
+
 	public void verify(String destination) throws IOException {
 		File[] files = new File(destination).listFiles(new FilenameFilter() {
 			@Override
@@ -29,10 +30,11 @@ public class Sha256Verify {
 		});
 		if (files == null) {
 			System.out.printf("\nError, no files found: %s\n", destination);
-			return ;
+			return;
 		}
 		verify(files);
 	}
+
 	public void verify(File[] sha256files) throws IOException {
 		Map<String, String> fileSha256Map = new TreeMap<>();
 		for (File file : sha256files) {
@@ -51,8 +53,7 @@ public class Sha256Verify {
 				String newhash = sha256sum(filename);
 				if (hash.equals(newhash)) {
 					filesVerified++;
-				}
-				else {
+				} else {
 					filesBad++;
 					output = "";
 					System.out.printf("\nHash verification failed: %s\n", filename);
@@ -64,23 +65,24 @@ public class Sha256Verify {
 			}
 			statistics();
 		}
-		
 
 	}
-	
+
 	String output = "";
 	long lastStatistics = 0;
+
 	private void statistics() {
-		if (System.currentTimeMillis() - lastStatistics < 5000) return;
+		if (System.currentTimeMillis() - lastStatistics < 5000)
+			return;
 		for (int i = 0; i < output.length(); i++)
 			System.out.print("\b");
-		double progress = (filesVerified+filesBad+filesError) * 100.0 / filesToVerify;
-		output = String.format("Verifying: %1.1f%%, verified successfully: %d bad: %d error: %d  ", progress, filesVerified, filesBad, filesError);
+		double progress = (filesVerified + filesBad + filesError) * 100.0 / filesToVerify;
+		output = String.format("Verifying: %1.1f%%, verified successfully: %d bad: %d error: %d  ", progress,
+				filesVerified, filesBad, filesError);
 		System.out.print(output);
 	}
-	
-	private String sha256sum(String filename) throws NoSuchAlgorithmException,
-			IOException, FileNotFoundException {
+
+	private String sha256sum(String filename) throws NoSuchAlgorithmException, IOException, FileNotFoundException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		try (FileInputStream fis = new FileInputStream(filename)) {
 			byte[] input = new byte[65535];

@@ -112,6 +112,7 @@ public class SecureCopy {
 
 		@Override
 		protected boolean handleDirectory(File directory, int depth, Collection<File> results) {
+			statistics();
 			if (depth == 0) {
 				currentDestinationPath = destination;
 			} else {
@@ -124,6 +125,7 @@ public class SecureCopy {
 
 		@Override
 		protected void handleDirectoryEnd(File directory, int depth, Collection<File> results) {
+			statistics();
 			currentDirectory.remove(directory);
 			currentDestinationPath = calculateDestinationPath();
 		}

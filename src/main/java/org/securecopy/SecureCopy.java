@@ -4,14 +4,21 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.commons.io.DirectoryWalker;
 import org.apache.commons.io.FileUtils;
+
+import static java.nio.file.FileVisitResult.*;
 
 public class SecureCopy {
 
@@ -44,7 +51,9 @@ public class SecureCopy {
 
 		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
 			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
-			cu.copyFiles(source, destination);
+			Path sourceDirectory = Paths.get(source);
+			Files.walkFileTree(sourceDirectory, cu);
+			System.out.println(" done!");
 		}
 	}
 
@@ -84,7 +93,7 @@ public class SecureCopy {
 		return time;
 	}
 
-	private static class CopyUtility extends DirectoryWalker<File> {
+	private static class CopyUtility extends SimpleFileVisitor<Path> {
 		final String destination;
 		final long started;
 		final Sha256Copy sha256copy;
@@ -92,6 +101,7 @@ public class SecureCopy {
 		String currentDestinationPath = null;
 		long bytesToCopy;
 		long bytesCopied = 0;
+		long depth = 0;
 
 		public CopyUtility(String destination, long bytesToCopy, Sha256Copy sha256copy) throws FileNotFoundException {
 			super();
@@ -101,55 +111,51 @@ public class SecureCopy {
 			this.started = System.currentTimeMillis();
 		}
 
-		public Collection<File> copyFiles(String source, String destination) throws Exception {
-			File sourceDirectory = new File(source);
-
-			Collection<File> files = new ArrayList<File>();
-			walk(sourceDirectory, files);
-			System.out.println(" done!");
-			return files;
-		}
 
 		@Override
-		protected boolean handleDirectory(File directory, int depth, Collection<File> results) {
+		public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
 			statistics();
 			if (depth == 0) {
 				currentDestinationPath = destination;
 			} else {
-				currentDirectory.add(directory);
+				currentDirectory.add(dir.toFile());
 				currentDestinationPath = calculateDestinationPath();
 			}
+			depth++;
 			new File(currentDestinationPath).mkdirs();
-			return true;
+			return CONTINUE;
 		}
-
 		@Override
-		protected void handleDirectoryEnd(File directory, int depth, Collection<File> results) {
+		public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
+			if (e != null) throw e;
 			statistics();
-			currentDirectory.remove(directory);
+			currentDirectory.remove(dir.toFile());
 			currentDestinationPath = calculateDestinationPath();
+			depth--;
+			return CONTINUE;
 		}
 
 		@Override
-		protected void handleFile(File file, int depth, Collection<File> results) {
-			String destinationFileName = currentDestinationPath + File.separator + file.getName();
+	    public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
+			String destinationFileName = currentDestinationPath + File.separator + file.getFileName();
 
 			File dstfile = new File(destinationFileName);
 
-			if (dstfile.exists() && dstfile.length() == file.length()) {
-				bytesToCopy -= file.length();
+			if (dstfile.exists() && dstfile.length() == attr.size()) {
+				bytesToCopy -= attr.size();
 				statistics();
-				return;
+				return CONTINUE;
 			}
 
 			try {
-				sha256copy.copyFile(file, destinationFileName);
-				bytesCopied += file.length();
+				sha256copy.copyFile(file.toFile(), destinationFileName);
+				bytesCopied += attr.size();
 			} catch (IOException e) {
 				System.out.printf("\nFile not found: %s\n", e.getMessage());
-				bytesToCopy -= file.length();
+				bytesToCopy -= attr.size();
 			}
 			statistics();
+			return CONTINUE;
 		}
 
 		String statisticsLine = "";

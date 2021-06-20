@@ -50,11 +50,26 @@ public class SecureCopy {
 		int blocksize = benchmark(lister.largestFile);
 
 		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
+			long t0, t1;
+			t0 = System.nanoTime();
 			CopyUtility cu = new CopyUtility(destination, lister.sizeCount, copier);
 			Path sourceDirectory = Paths.get(source);
 			Files.walkFileTree(sourceDirectory, cu);
-			System.out.println(" done!");
+			t1 = System.nanoTime();
+			System.out.println(" done! " + nanoExecTimeToText(t0, t1));
 		}
+	}
+
+	private static String nanoExecTimeToText(long t0, long t1) {
+		final long NANOS_PER_MINUTE_LONG = 60_000_000_000l;
+		final double NANOS_PER_SECOND_DOUBLE = 1_000_000_000f;
+		long time = t1  - t0;
+		double seconds = (time % NANOS_PER_MINUTE_LONG) / NANOS_PER_SECOND_DOUBLE;
+		time /= NANOS_PER_MINUTE_LONG;
+		long mins = time % 60;
+		time /= 60;
+		long hours = time;
+		return String.format("%d hours, %d mins, %.1f seconds", hours, mins, seconds);
 	}
 
 	private static int benchmark(File largestFile) throws IOException {

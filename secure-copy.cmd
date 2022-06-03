@@ -1,1 +1,1 @@
-java %JAVA_OPTS% -cp target\classes;target\lib\commons-io-2.10.0.jar;target\classes;target\lib\commons-codec-1.10.jar org.securecopy.SecureCopy %*
+java %JAVA_OPTS% -cp target\classes org.securecopy.SecureCopy %*

@@ -4,7 +4,7 @@ import java.io.PrintWriter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.apache.commons.codec.binary.Hex;
+import org.securecopy.Util;
 import org.securecopy.messages.CloseFileMessage;
 import org.securecopy.messages.CreateFileMessage;
 import org.securecopy.messages.Message;
@@ -50,7 +50,7 @@ public class MessageDigestActor extends ReliableActor {
 		if (!sane)
 			return;
 		byte[] digest = md.digest();
-		String hex = Hex.encodeHexString(digest);
+		String hex = Util.encodeHexString(digest);
 		hashPrintWriter.printf("%s %s\n", hex, filename);
 		hashPrintWriter.flush();
 	}

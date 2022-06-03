@@ -12,14 +12,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.FileUtils;
-
-public class Sha256Verify {
-	long filesToVerify = 0;
-	long filesVerified = 0;
-	long filesBad = 0;
-	long filesError = 0;
+class Sha256Verify {
+	static long filesToVerify = 0;
+	static long filesVerified = 0;
+	static long filesBad = 0;
+	static long filesError = 0;
 
 	public void verify(String destination) throws IOException {
 		File[] files = new File(destination).listFiles(new FilenameFilter() {
@@ -35,17 +32,17 @@ public class Sha256Verify {
 		verify(files);
 	}
 
-	public void verify(File[] sha256files) throws IOException {
+	static void verify(File[] sha256files) throws IOException {
 		Map<String, String> fileSha256Map = new TreeMap<>();
 		for (File file : sha256files) {
-			List<String> lines = FileUtils.readLines(file);
+			List<String> lines = Util.readLines(file);
 			for (String line : lines) {
 				final String checksum = line.substring(0, 64);
 				final String filename = line.substring(65);
 				fileSha256Map.put(filename, checksum);
 			}
 		}
-		this.filesToVerify = fileSha256Map.size();
+		filesToVerify = fileSha256Map.size();
 		for (Entry<String, String> entry : fileSha256Map.entrySet()) {
 			final String filename = entry.getKey();
 			final String hash = entry.getValue();
@@ -68,10 +65,10 @@ public class Sha256Verify {
 
 	}
 
-	String output = "";
-	long lastStatistics = 0;
+	static String output = "";
+	static long lastStatistics = 0;
 
-	private void statistics() {
+	private static void statistics() {
 		if (System.currentTimeMillis() - lastStatistics < 5000)
 			return;
 		for (int i = 0; i < output.length(); i++)
@@ -82,7 +79,8 @@ public class Sha256Verify {
 		System.out.print(output);
 	}
 
-	private String sha256sum(String filename) throws NoSuchAlgorithmException, IOException, FileNotFoundException {
+	private static String sha256sum(String filename)
+			throws NoSuchAlgorithmException, IOException, FileNotFoundException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		try (FileInputStream fis = new FileInputStream(filename)) {
 			byte[] input = new byte[65535];
@@ -92,7 +90,7 @@ public class Sha256Verify {
 			}
 		}
 		byte[] digest = md.digest();
-		String hex = Hex.encodeHexString(digest);
+		String hex = Util.encodeHexString(digest);
 		return hex;
 	}
 

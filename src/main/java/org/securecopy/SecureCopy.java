@@ -1,11 +1,13 @@
 package org.securecopy;
 
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.FileVisitResult.TERMINATE;
+
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
@@ -13,12 +15,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.TreeMap;
-
-import org.apache.commons.io.FileUtils;
-
-import static java.nio.file.FileVisitResult.*;
+import java.util.List;;
 
 public class SecureCopy {
 
@@ -45,9 +42,9 @@ public class SecureCopy {
 		ListFileUtility lister = new ListFileUtility();
 		Collection<File> files = lister.listFiles(source);
 		System.out.format("Entries: %d Dirs: %d Files: %d Size: %s\n", files.size(), lister.dirCount, lister.fileCount,
-				FileUtils.byteCountToDisplaySize(lister.sizeCount));
+				Util.byteCountToDisplaySize(lister.sizeCount));
 
-		int blocksize = benchmark(lister.largestFile);
+		int blocksize = 262144;
 
 		try (Sha256Copy copier = Sha256Copy.initilize(destination, blocksize)) {
 			long t0, t1;
@@ -56,56 +53,8 @@ public class SecureCopy {
 			Path sourceDirectory = Paths.get(source);
 			Files.walkFileTree(sourceDirectory, cu);
 			t1 = System.nanoTime();
-			System.out.println(" done! " + nanoExecTimeToText(t0, t1));
+			System.out.println(" done! " + Util.nanoExecTimeToText(t0, t1));
 		}
-	}
-
-	private static String nanoExecTimeToText(long t0, long t1) {
-		final long NANOS_PER_MINUTE_LONG = 60_000_000_000l;
-		final double NANOS_PER_SECOND_DOUBLE = 1_000_000_000f;
-		long time = t1  - t0;
-		double seconds = (time % NANOS_PER_MINUTE_LONG) / NANOS_PER_SECOND_DOUBLE;
-		time /= NANOS_PER_MINUTE_LONG;
-		long mins = time % 60;
-		time /= 60;
-		long hours = time;
-		return String.format("%d hours, %d mins, %.1f seconds", hours, mins, seconds);
-	}
-
-	private static int benchmark(File largestFile) throws IOException {
-		System.out.format("Benchmarking on %s:\n", largestFile.getAbsolutePath());
-		TreeMap<Long, Integer> timeToBlockSize = new TreeMap<Long, Integer>();
-		final int blockbasesize = 1024;
-		try (FileInputStream fis = new FileInputStream(largestFile)) {
-			// warm up so startup issues doesn't affect benchmarking
-			benchmarkRead1GB(fis, blockbasesize);
-		}
-		for (int i = 1; i < 10000; i *= 4) {
-			try (FileInputStream fis = new FileInputStream(largestFile)) {
-				int blocksize = blockbasesize * i;
-				final long time = benchmarkRead1GB(fis, blocksize);
-				System.out.printf("   %8d %.1fs\n", blocksize, time / 1000.0);
-				timeToBlockSize.put(time, blocksize);
-			}
-		}
-		Integer optimalBlocksize = timeToBlockSize.firstEntry().getValue();
-		System.out.format("Selected blocksize: %d\n", optimalBlocksize);
-		return optimalBlocksize;
-	}
-
-	private static long benchmarkRead1GB(FileInputStream fis, int blocksize) throws IOException {
-		long started;
-		long stopped;
-		byte[] input = new byte[blocksize];
-		int readBytes;
-		long totalReadBytes = 0;
-		started = System.currentTimeMillis();
-		while (((readBytes = fis.read(input)) != -1) && totalReadBytes < 1_000_000_000) {
-			totalReadBytes += readBytes;
-		}
-		stopped = System.currentTimeMillis();
-		final long time = stopped - started;
-		return time;
 	}
 
 	private static class CopyUtility extends SimpleFileVisitor<Path> {
@@ -126,7 +75,6 @@ public class SecureCopy {
 			this.started = System.currentTimeMillis();
 		}
 
-
 		@Override
 		public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
 			statistics();
@@ -140,9 +88,11 @@ public class SecureCopy {
 			new File(currentDestinationPath).mkdirs();
 			return CONTINUE;
 		}
+
 		@Override
 		public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
-			if (e != null) throw e;
+			if (e != null)
+				throw e;
 			statistics();
 			currentDirectory.remove(dir.toFile());
 			currentDestinationPath = calculateDestinationPath();
@@ -151,7 +101,7 @@ public class SecureCopy {
 		}
 
 		@Override
-	    public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
+		public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
 			String destinationFileName = currentDestinationPath + File.separator + file.getFileName();
 
 			File dstfile = new File(destinationFileName);
@@ -168,6 +118,7 @@ public class SecureCopy {
 			} catch (IOException e) {
 				System.out.printf("\nFile not found: %s\n", e.getMessage());
 				bytesToCopy -= attr.size();
+				return TERMINATE;
 			}
 			statistics();
 			return CONTINUE;
@@ -192,21 +143,11 @@ public class SecureCopy {
 				System.out.print("\b");
 			final double percentDone = (bytesCopied * 100.0) / bytesToCopy;
 			final long secondsLeft = (long) ((secondsElapsed / percentDone) * (100.0 - percentDone));
-			String timeLeft = formatTime(secondsLeft);
+			String timeLeft = Util.formatTime(secondsLeft);
 			statisticsLine = String.format("%s of %s, %1.1f%% (%s/s)... Estimated time left: %s      ",
-					FileUtils.byteCountToDisplaySize(bytesCopied), FileUtils.byteCountToDisplaySize(bytesToCopy),
-					percentDone, FileUtils.byteCountToDisplaySize(bytesCopied / secondsElapsed), timeLeft);
+					Util.byteCountToDisplaySize(bytesCopied), Util.byteCountToDisplaySize(bytesToCopy), percentDone,
+					Util.byteCountToDisplaySize(bytesCopied / secondsElapsed), timeLeft);
 			System.out.print(statisticsLine);
-		}
-
-		private String formatTime(long seconds) {
-			if (seconds > 3600) {
-				return String.format("%1.1f hours", seconds / 3600.0);
-			} else if (seconds <= 0) {
-				return "N/A";
-			} else {
-				return String.format("%dm %ds", seconds / 60, seconds % 60);
-			}
 		}
 
 		private String calculateDestinationPath() {

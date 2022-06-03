@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -33,7 +31,7 @@ public class SecureCopyTest {
 		File[] files = locateSha256sum();
 		assertEquals(1, files.length);
 
-		List<String> checksumLines = FileUtils.readLines(files[0]);
+		List<String> checksumLines = Util.readLines(files[0]);
 		assertEquals(21, checksumLines.size());
 
 		for (String line : checksumLines) {
@@ -84,7 +82,7 @@ public class SecureCopyTest {
 			}
 		}
 		byte[] digest = md.digest();
-		String hex = Hex.encodeHexString(digest);
+		String hex = Util.encodeHexString(digest);
 		return hex;
 	}
 
@@ -102,7 +100,7 @@ public class SecureCopyTest {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		File tempdir = new File(TEMP_DIR);
-		FileUtils.deleteDirectory(tempdir);
+		Util.deleteDirectory(tempdir);
 		tempdir.mkdir();
 		createSourceDir();
 	}
@@ -110,7 +108,7 @@ public class SecureCopyTest {
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 		File tempdir = new File(TEMP_DIR);
-		FileUtils.deleteDirectory(tempdir);
+		Util.deleteDirectory(tempdir);
 	}
 
 	private static void createSourceDir() throws IOException {
@@ -126,7 +124,7 @@ public class SecureCopyTest {
 			rnd.nextBytes(data);
 			String filename = dir + "/a" + rnd.nextLong();
 			File file = new File(filename);
-			FileUtils.writeByteArrayToFile(file, data);
+			Util.writeByteArrayToFile(file, data);
 			System.out.println("created: " + filename);
 		}
 		if (depth <= 0)
